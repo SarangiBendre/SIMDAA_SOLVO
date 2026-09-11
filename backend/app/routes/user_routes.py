@@ -74,6 +74,7 @@ def get_users():
         return users
 
 
+
 # ---------------------------------------------------------
 # POST /users/
 # Create a new user
@@ -215,6 +216,99 @@ def create_user(user: UserCreate):
         "Department": user.Department,
         "RoleID": user.RoleID
     }
+
+# ---------------------------------------------------------
+# GET /users/profile/{user_id}
+# User Profile API
+# ---------------------------------------------------------
+
+@router.get("/profile/{user_id}")
+def get_user_profile(user_id: int):
+
+    with engine.connect() as connection:
+
+        # ---------------------------------------------
+        # Get user details
+        # ---------------------------------------------
+
+        user = connection.execute(
+            text("""
+                SELECT
+                    UserID,
+                    Username,
+                    FullName,
+                    Email,
+                    Department
+                FROM Users
+                WHERE UserID = :user_id
+            """),
+            {
+                "user_id": user_id
+            }
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        # ---------------------------------------------
+        # Questions Asked
+        # ---------------------------------------------
+
+        questions_count = connection.execute(
+            text("""
+                SELECT COUNT(*) AS TotalQuestions
+                FROM Questions
+                WHERE UserID = :user_id
+            """),
+            {
+                "user_id": user_id
+            }
+        ).scalar()
+
+        # ---------------------------------------------
+        # Answers Posted
+        # ---------------------------------------------
+
+        answers_count = connection.execute(
+            text("""
+                SELECT COUNT(*) AS TotalAnswers
+                FROM Answers
+                WHERE UserID = :user_id
+            """),
+            {
+                "user_id": user_id
+            }
+        ).scalar()
+
+        # ---------------------------------------------
+        # Accepted Answers
+        # ---------------------------------------------
+
+        accepted_answers = connection.execute(
+            text("""
+                SELECT COUNT(*) AS AcceptedAnswers
+                FROM Answers
+                WHERE UserID = :user_id
+                AND IsAccepted = 1
+            """),
+            {
+                "user_id": user_id
+            }
+        ).scalar()
+
+        return {
+            "UserID": user.UserID,
+            "Username": user.Username,
+            "FullName": user.FullName,
+            "Email": user.Email,
+            "Department": user.Department,
+            "QuestionsAsked": questions_count,
+            "AnswersPosted": answers_count,
+            "AcceptedAnswers": accepted_answers
+        }
 
 
 @router.get("/{user_id}")
