@@ -3,15 +3,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
 
-
 from app.database import get_db
-
+from app.models import Answer
 
 router = APIRouter(
     prefix="/answers",
     tags=["Answers"]
 )
-
 
 # ============================================================
 # Request Model - Create Answer
@@ -34,10 +32,6 @@ def create_answer(
     db: Session = Depends(get_db)
 ):
 
-    # --------------------------------------------------------
-    # Check whether question exists
-    # --------------------------------------------------------
-
     question = db.execute(
         text("""
             SELECT QuestionID
@@ -54,11 +48,6 @@ def create_answer(
             status_code=404,
             detail="Question not found"
         )
-
-
-    # --------------------------------------------------------
-    # Check whether user exists and is active
-    # --------------------------------------------------------
 
     user = db.execute(
         text("""
@@ -77,11 +66,6 @@ def create_answer(
             status_code=404,
             detail="User not found or inactive"
         )
-
-
-    # --------------------------------------------------------
-    # Insert answer
-    # --------------------------------------------------------
 
     result = db.execute(
         text("""
@@ -124,7 +108,6 @@ def create_answer(
 
     db.commit()
 
-
     return {
         "message": "Answer created successfully",
         "AnswerID": new_answer.AnswerID,
@@ -149,10 +132,6 @@ def get_answers_by_question(
     db: Session = Depends(get_db)
 ):
 
-    # --------------------------------------------------------
-    # Check whether question exists
-    # --------------------------------------------------------
-
     question = db.execute(
         text("""
             SELECT QuestionID
@@ -169,13 +148,6 @@ def get_answers_by_question(
             status_code=404,
             detail="Question not found"
         )
-
-
-    # --------------------------------------------------------
-    # Get answers
-    # Accepted answer appears first
-    # Then highest upvotes
-    # --------------------------------------------------------
 
     result = db.execute(
         text("""
@@ -201,7 +173,6 @@ def get_answers_by_question(
     )
 
     answers = result.fetchall()
-
 
     return [
         {
@@ -250,13 +221,11 @@ def get_answer(
 
     answer = result.fetchone()
 
-
     if not answer:
         raise HTTPException(
             status_code=404,
             detail="Answer not found"
         )
-
 
     return {
         "AnswerID": answer.AnswerID,
@@ -268,3 +237,37 @@ def get_answer(
         "CreatedAt": answer.CreatedAt,
         "UpdatedAt": answer.UpdatedAt
     }
+
+
+# ============================================================
+# PUT /answers/{answer_id}/accept
+# Accept an answer
+# ============================================================
+
+@router.put("/{answer_id}/accept")
+def accept_answer(
+    answer_id: int,
+    db: Session = Depends(get_db)
+):
+
+    answer = db.query(Answer).filter(
+        Answer.AnswerID == answer_id
+    ).first()
+
+    if not answer:
+        raise HTTPException(
+            status_code=404,
+            detail="Answer not found"
+        )
+
+    answer.IsAccepted = True
+
+    db.commit()
+    db.refresh(answer)
+
+    return {
+        "message": "Answer accepted successfully",
+        "AnswerID": answer.AnswerID,
+        "IsAccepted": answer.IsAccepted
+    }
+
