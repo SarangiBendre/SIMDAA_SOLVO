@@ -242,3 +242,104 @@ def get_question(
         "CreatedAt": question.CreatedAt,
         "UpdatedAt": question.UpdatedAt
     }
+
+
+# ============================================================
+# GET /questions/{question_id}/details
+# Get question with all answers
+# ============================================================
+
+@router.get("/{question_id}/details")
+def get_question_details(
+    question_id: int,
+    db: Session = Depends(get_db)
+):
+
+    # --------------------------------------------------------
+    # Get Question
+    # --------------------------------------------------------
+
+    question_result = db.execute(
+        text("""
+            SELECT
+                QuestionID,
+                UserID,
+                CategoryID,
+                StatusID,
+                Title,
+                Description,
+                AttachmentPath,
+                ViewsCount,
+                CreatedAt,
+                UpdatedAt
+            FROM Questions
+            WHERE QuestionID = :question_id
+        """),
+        {
+            "question_id": question_id
+        }
+    )
+
+    question = question_result.fetchone()
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+    # --------------------------------------------------------
+    # Get Answers
+    # --------------------------------------------------------
+
+    answers_result = db.execute(
+        text("""
+            SELECT
+                AnswerID,
+                UserID,
+                AnswerText,
+                IsAccepted,
+                Upvotes,
+                CreatedAt,
+                UpdatedAt
+            FROM Answers
+            WHERE QuestionID = :question_id
+            ORDER BY
+                IsAccepted DESC,
+                Upvotes DESC
+        """),
+        {
+            "question_id": question_id
+        }
+    )
+
+    answers = answers_result.fetchall()
+
+    # --------------------------------------------------------
+    # Return Question + Answers
+    # --------------------------------------------------------
+
+    return {
+        "QuestionID": question.QuestionID,
+        "UserID": question.UserID,
+        "CategoryID": question.CategoryID,
+        "StatusID": question.StatusID,
+        "Title": question.Title,
+        "Description": question.Description,
+        "AttachmentPath": question.AttachmentPath,
+        "ViewsCount": question.ViewsCount,
+        "CreatedAt": question.CreatedAt,
+        "UpdatedAt": question.UpdatedAt,
+        "Answers": [
+            {
+                "AnswerID": answer.AnswerID,
+                "UserID": answer.UserID,
+                "AnswerText": answer.AnswerText,
+                "IsAccepted": answer.IsAccepted,
+                "Upvotes": answer.Upvotes,
+                "CreatedAt": answer.CreatedAt,
+                "UpdatedAt": answer.UpdatedAt
+            }
+            for answer in answers
+        ]
+    }
