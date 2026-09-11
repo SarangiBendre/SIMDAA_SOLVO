@@ -187,15 +187,14 @@ def get_questions(
         for question in questions
     ]
 
-
 # ============================================================
-# GET /questions/{question_id}
-# Get a single question
+# GET /questions/search
+# Search questions by keyword
 # ============================================================
 
-@router.get("/{question_id}")
-def get_question(
-    question_id: int,
+@router.get("/search")
+def search_questions(
+    keyword: str,
     db: Session = Depends(get_db)
 ):
 
@@ -213,36 +212,27 @@ def get_question(
                 CreatedAt,
                 UpdatedAt
             FROM Questions
-            WHERE QuestionID = :question_id
+            WHERE
+                Title LIKE :keyword
+                OR Description LIKE :keyword
+            ORDER BY CreatedAt DESC
         """),
         {
-            "question_id": question_id
+            "keyword": f"%{keyword}%"
         }
     )
 
-    question = result.fetchone()
+    questions = result.fetchall()
 
-
-    if not question:
-        raise HTTPException(
-            status_code=404,
-            detail="Question not found"
-        )
-
-
-    return {
-        "QuestionID": question.QuestionID,
-        "UserID": question.UserID,
-        "CategoryID": question.CategoryID,
-        "StatusID": question.StatusID,
-        "Title": question.Title,
-        "Description": question.Description,
-        "AttachmentPath": question.AttachmentPath,
-        "ViewsCount": question.ViewsCount,
-        "CreatedAt": question.CreatedAt,
-        "UpdatedAt": question.UpdatedAt
-    }
-
+    return [
+        {
+            "QuestionID": question.QuestionID,
+            "Title": question.Title,
+            "Description": question.Description,
+            "ViewsCount": question.ViewsCount
+        }
+        for question in questions
+    ]
 
 # ============================================================
 # GET /questions/{question_id}/details
@@ -343,3 +333,62 @@ def get_question_details(
             for answer in answers
         ]
     }
+
+
+
+# ============================================================
+# GET /questions/{question_id}
+# Get a single question
+# ============================================================
+
+@router.get("/{question_id}")
+def get_question(
+    question_id: int,
+    db: Session = Depends(get_db)
+):
+
+    result = db.execute(
+        text("""
+            SELECT
+                QuestionID,
+                UserID,
+                CategoryID,
+                StatusID,
+                Title,
+                Description,
+                AttachmentPath,
+                ViewsCount,
+                CreatedAt,
+                UpdatedAt
+            FROM Questions
+            WHERE QuestionID = :question_id
+        """),
+        {
+            "question_id": question_id
+        }
+    )
+
+    question = result.fetchone()
+
+
+    if not question:
+        raise HTTPException(
+            status_code=404,
+            detail="Question not found"
+        )
+
+
+    return {
+        "QuestionID": question.QuestionID,
+        "UserID": question.UserID,
+        "CategoryID": question.CategoryID,
+        "StatusID": question.StatusID,
+        "Title": question.Title,
+        "Description": question.Description,
+        "AttachmentPath": question.AttachmentPath,
+        "ViewsCount": question.ViewsCount,
+        "CreatedAt": question.CreatedAt,
+        "UpdatedAt": question.UpdatedAt
+    }
+
+
