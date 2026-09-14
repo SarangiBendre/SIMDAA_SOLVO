@@ -5,30 +5,32 @@ from pydantic import BaseModel
 
 from app.database import get_db
 from app.models import Answer
+from app.auth import get_current_user
 
 router = APIRouter(
     prefix="/answers",
     tags=["Answers"]
 )
 
+
 # ============================================================
-# Request Model - Create Answer
+# Request Model
 # ============================================================
 
 class AnswerCreate(BaseModel):
     QuestionID: int
-    UserID: int
     AnswerText: str
 
 
 # ============================================================
 # POST /answers/
-# Create a new answer
+# Create Answer
 # ============================================================
 
 @router.post("/")
 def create_answer(
     answer: AnswerCreate,
+    current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
 
@@ -57,7 +59,7 @@ def create_answer(
               AND IsActive = 1
         """),
         {
-            "user_id": answer.UserID
+            "user_id": current_user["UserID"]
         }
     ).fetchone()
 
@@ -99,7 +101,7 @@ def create_answer(
         """),
         {
             "question_id": answer.QuestionID,
-            "user_id": answer.UserID,
+            "user_id": current_user["UserID"],
             "answer_text": answer.AnswerText
         }
     )
@@ -123,7 +125,7 @@ def create_answer(
 
 # ============================================================
 # GET /answers/question/{question_id}
-# Get all answers for a question
+# Get Answers By Question
 # ============================================================
 
 @router.get("/question/{question_id}")
@@ -191,7 +193,7 @@ def get_answers_by_question(
 
 # ============================================================
 # GET /answers/{answer_id}
-# Get a single answer
+# Get Single Answer
 # ============================================================
 
 @router.get("/{answer_id}")
@@ -241,12 +243,13 @@ def get_answer(
 
 # ============================================================
 # PUT /answers/{answer_id}/accept
-# Accept an answer
+# Accept Answer
 # ============================================================
 
 @router.put("/{answer_id}/accept")
 def accept_answer(
     answer_id: int,
+    current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
 
@@ -271,3 +274,81 @@ def accept_answer(
         "IsAccepted": answer.IsAccepted
     }
 
+
+# ============================================================
+# PUT /answers/{answer_id}/upvote
+# Upvote Answer
+# ============================================================
+
+@router.put("/{answer_id}/upvote")
+def upvote_answer(
+    answer_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    answer = db.execute(
+        text("""
+            SELECT
+                AnswerID,
+                Upvotes
+            FROM Answers
+            WHERE AnswerID = :answer_id
+        """),
+        {
+            "answer_id": answer_id
+        }
+    ).fetchone()
+
+    if not answer:
+        raise HTTPException(
+            status_code=404,
+            detail="Answer not found"
+        )
+
+    db.execute(
+        text("""
+            UPDATE Answers
+            SET Upvotes = Upvotes + 1
+            WHERE AnswerID = :answer_id
+        """),
+        {
+            "answer_id": answer_id
+        }
+    )
+
+    db.commit()
+
+    updated_answer = db.execute(
+        text("""
+            SELECT
+                AnswerID,
+                Upvotes
+            FROM Answers
+            WHERE AnswerID = :answer_id
+        """),
+        {
+            "answer_id": answer_id
+        }
+    ).fetchone()
+
+    return {
+        "message": "Answer upvoted successfully",
+        "AnswerID": updated_answer.AnswerID,
+        "Upvotes": updated_answer.Upvotes
+    }
+class AnswerUpdate(BaseModel):
+    AnswerText:str
+
+@router.put("/{answer_id}")
+def update_answer(answer_id:int,payload:AnswerUpdate,current_user=Depends(get_current_user),db:Session=Depends(get_db)):
+    db.execute(text("UPDATE Answers SET AnswerText=:txt, UpdatedAt=GETDATE() WHERE AnswerID=:id AND UserID=:uid"),
+    {"txt":payload.AnswerText,"id":answer_id,"uid":current_user["UserID"]})
+    db.commit()
+    return {"message":"Answer updated successfully"}
+
+@router.delete("/{answer_id}")
+def delete_answer(answer_id:int,current_user=Depends(get_current_user),db:Session=Depends(get_db)):
+    db.execute(text("DELETE FROM Answers WHERE AnswerID=:id AND UserID=:uid"),{"id":answer_id,"uid":current_user["UserID"]})
+    db.commit()
+    return {"message":"Answer deleted successfully"}

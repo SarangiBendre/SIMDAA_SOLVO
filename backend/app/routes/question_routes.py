@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from pydantic import BaseModel
-
+from app.auth import get_current_user
 
 from app.database import get_db
+from app.Services.email_service import send_email
 
 
 router = APIRouter(
@@ -18,7 +19,6 @@ router = APIRouter(
 # ============================================================
 
 class QuestionCreate(BaseModel):
-    UserID: int
     CategoryID: int
     Title: str
     Description: str
@@ -33,6 +33,7 @@ class QuestionCreate(BaseModel):
 @router.post("/")
 def create_question(
     question: QuestionCreate,
+    current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
 
@@ -45,7 +46,7 @@ def create_question(
               AND IsActive = 1
         """),
         {
-            "user_id": question.UserID
+            "user_id": current_user["UserID"]
         }
     ).fetchone()
 
@@ -113,7 +114,7 @@ def create_question(
             )
         """),
         {
-            "user_id": question.UserID,
+            "user_id": current_user["UserID"],
             "category_id": question.CategoryID,
             "title": question.Title,
             "description": question.Description,
@@ -125,6 +126,47 @@ def create_question(
 
     db.commit()
 
+    # Get all active users except question creator
+    active_users = db.execute(
+        text("""
+            SELECT Email
+            FROM Users
+            WHERE IsActive = 1
+            AND UserID <> :current_user_id
+        """),
+        {
+            "current_user_id": current_user["UserID"]
+        }
+    ).fetchall()
+
+    # Send email to all active users
+    for user_email in active_users:
+        try:
+            print(f"Sending email to: {user_email.Email}")
+
+            send_email(
+                user_email.Email,
+                "New Question Posted - SIMDAA SOLVO",
+                f"""
+    A new question has been posted.
+
+    Title:
+    {new_question.Title}
+
+    Description:
+    {new_question.Description}
+
+    Please login to SIMDAA SOLVO to view and answer.
+
+    Regards,
+    SIMDAA SOLVO Team
+    """
+            )
+
+            print(f"Email sent to: {user_email.Email}")
+
+        except Exception as e:
+            print(f"Failed to send email to {user_email.Email}: {e}")
 
     return {
         "message": "Question created successfully",
@@ -392,3 +434,23 @@ def get_question(
     }
 
 
+
+
+class QuestionUpdate(BaseModel):
+    CategoryID: int | None = None
+    Title: str | None = None
+    Description: str | None = None
+    AttachmentPath: str | None = None
+
+@router.put("/{question_id}")
+def update_question(question_id:int,payload:QuestionUpdate,current_user=Depends(get_current_user),db:Session=Depends(get_db)):
+    db.execute(text("""UPDATE Questions SET Title=COALESCE(:t,Title), Description=COALESCE(:d,Description), CategoryID=COALESCE(:c,CategoryID), AttachmentPath=COALESCE(:a,AttachmentPath), UpdatedAt=GETDATE() WHERE QuestionID=:id AND UserID=:uid"""),
+    {"t":payload.Title,"d":payload.Description,"c":payload.CategoryID,"a":payload.AttachmentPath,"id":question_id,"uid":current_user["UserID"]})
+    db.commit()
+    return {"message":"Question updated successfully"}
+
+@router.delete("/{question_id}")
+def delete_question(question_id:int,current_user=Depends(get_current_user),db:Session=Depends(get_db)):
+    db.execute(text("DELETE FROM Questions WHERE QuestionID=:id AND UserID=:uid"),{"id":question_id,"uid":current_user["UserID"]})
+    db.commit()
+    return {"message":"Question deleted successfully"}

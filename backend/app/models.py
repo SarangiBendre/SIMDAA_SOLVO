@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from app.database import Base
 
@@ -30,3 +31,15 @@ class Vote(Base):
     AnswerID = Column(Integer)
     UserID = Column(Integer)
     VoteType = Column(Integer)
+
+
+class AnswerCreate(BaseModel):
+    QuestionID: int
+    UserID: int
+    AnswerText: str
+
+
+class CommentCreate(BaseModel):
+    AnswerID: int
+    UserID: int
+    CommentText: str

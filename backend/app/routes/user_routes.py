@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy import text
 import bcrypt
+from app.auth import get_current_user
 
 from ..database import engine
 
@@ -32,7 +33,9 @@ class UserCreate(BaseModel):
 # ---------------------------------------------------------
 
 @router.get("/")
-def get_users():
+def get_users(
+    current_user=Depends(get_current_user)
+):
 
     with engine.connect() as connection:
 
@@ -223,13 +226,12 @@ def create_user(user: UserCreate):
 # ---------------------------------------------------------
 
 @router.get("/profile/{user_id}")
-def get_user_profile(user_id: int):
+def get_user_profile(
+    user_id: int,
+    current_user=Depends(get_current_user)
+):
 
     with engine.connect() as connection:
-
-        # ---------------------------------------------
-        # Get user details
-        # ---------------------------------------------
 
         user = connection.execute(
             text("""
@@ -253,10 +255,6 @@ def get_user_profile(user_id: int):
                 detail="User not found"
             )
 
-        # ---------------------------------------------
-        # Questions Asked
-        # ---------------------------------------------
-
         questions_count = connection.execute(
             text("""
                 SELECT COUNT(*) AS TotalQuestions
@@ -268,10 +266,6 @@ def get_user_profile(user_id: int):
             }
         ).scalar()
 
-        # ---------------------------------------------
-        # Answers Posted
-        # ---------------------------------------------
-
         answers_count = connection.execute(
             text("""
                 SELECT COUNT(*) AS TotalAnswers
@@ -282,10 +276,6 @@ def get_user_profile(user_id: int):
                 "user_id": user_id
             }
         ).scalar()
-
-        # ---------------------------------------------
-        # Accepted Answers
-        # ---------------------------------------------
 
         accepted_answers = connection.execute(
             text("""
@@ -311,8 +301,16 @@ def get_user_profile(user_id: int):
         }
 
 
+# ---------------------------------------------------------
+# GET /users/{user_id}
+# Get single user
+# ---------------------------------------------------------
+
 @router.get("/{user_id}")
-def get_user(user_id: int):
+def get_user(
+    user_id: int,
+    current_user=Depends(get_current_user)
+):
 
     with engine.connect() as connection:
 
@@ -355,3 +353,20 @@ def get_user(user_id: int):
             "UpdatedAt": result.UpdatedAt,
             "LastLogin": result.LastLogin
         }
+class UserUpdate(BaseModel):
+    FullName:str|None=None
+    Email:str|None=None
+    Department:str|None=None
+
+@router.put("/{user_id}")
+def update_user(user_id:int,user:UserUpdate,current_user=Depends(get_current_user)):
+    with engine.begin() as connection:
+        connection.execute(text("""UPDATE Users SET FullName=COALESCE(:f,FullName),Email=COALESCE(:e,Email),Department=COALESCE(:d,Department),UpdatedAt=GETDATE() WHERE UserID=:id"""),
+        {"f":user.FullName,"e":user.Email,"d":user.Department,"id":user_id})
+    return {"message":"User updated successfully"}
+
+@router.delete("/{user_id}")
+def delete_user(user_id:int,current_user=Depends(get_current_user)):
+    with engine.begin() as connection:
+        connection.execute(text("UPDATE Users SET IsActive=0 WHERE UserID=:id"),{"id":user_id})
+    return {"message":"User deactivated successfully"}
