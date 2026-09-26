@@ -1,0 +1,4 @@
+# Optional: only needed if DATABASE_URL points at SQL Server.
+# Also requires the "ODBC Driver 17 for SQL Server" system package to be
+# installed separately (see https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server).
+pyodbc==5.2.0
