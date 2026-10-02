@@ -1,0 +1,11 @@
+/* Minimal global reset; design tokens and component styles live in
+   styles/theme.css and per-page stylesheets. */
+
+html, body, #root {
+  height: 100%;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}

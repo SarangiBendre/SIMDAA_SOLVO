@@ -1,0 +1,137 @@
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+}
+
+.auth-brand-panel {
+  flex: 1;
+  background: radial-gradient(circle at 20% 20%, #1E88E5, #0F4C81 65%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 64px;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-brand-panel::after {
+  content: "";
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  right: -160px;
+  bottom: -160px;
+}
+
+.auth-brand-panel h1 {
+  color: #fff;
+  font-size: 40px;
+  max-width: 420px;
+  margin-bottom: 16px;
+}
+
+.auth-brand-panel p {
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 380px;
+  font-size: 15.5px;
+}
+
+.auth-brand-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+.auth-logo-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+/* On the white form panel (used for the mobile-only brand header
+   below), the white circular chip has nothing to contrast against -
+   drop its background/shadow so it's just the mark itself. */
+.auth-logo-chip-light {
+  background: transparent;
+  box-shadow: none;
+  width: auto;
+  height: auto;
+}
+
+/* Shown only on narrow screens, where .auth-brand-panel (which
+   normally carries the "SIMDAA SOLVO" name) is hidden entirely - so
+   the app's name is still visible somewhere on the login/reset pages. */
+.auth-mobile-brand {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.auth-mobile-brand strong {
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--color-primary);
+}
+
+@media (max-width: 860px) {
+  .auth-mobile-brand {
+    display: flex;
+  }
+}
+
+.auth-brand-tag strong {
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.auth-form-panel {
+  width: 460px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #fff;
+}
+
+.auth-form-box {
+  width: 100%;
+  max-width: 340px;
+}
+
+.auth-form-box h2 {
+  margin-bottom: 6px;
+}
+
+.auth-form-box .auth-sub {
+  color: var(--color-text-muted);
+  margin-bottom: 28px;
+  font-size: 14.5px;
+}
+
+.auth-hint {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--color-text-faint);
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .auth-brand-panel { display: none; }
+  .auth-form-panel { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .auth-form-panel { padding: 24px 20px; }
+}

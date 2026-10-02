@@ -1,0 +1,99 @@
+.topbar {
+  height: var(--topbar-height);
+  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 32px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.topbar-menu-btn {
+  display: none;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 20px;
+  padding: 6px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.topbar-title {
+  font-size: 19px;
+  white-space: nowrap;
+}
+
+.topbar-search {
+  flex: 1;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-bg);
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  padding: 9px 16px;
+  color: var(--color-text-faint);
+  transition: border-color 0.15s ease;
+  min-width: 0;
+}
+
+.topbar-search:focus-within {
+  border-color: var(--color-secondary);
+  background: #fff;
+}
+
+.topbar-search input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.topbar-bell {
+  margin-left: auto;
+  position: relative;
+  color: var(--color-text-muted);
+  font-size: 18px;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.topbar-bell-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid #fff;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    padding: 0 14px;
+    gap: 12px;
+  }
+
+  .topbar-menu-btn {
+    display: flex;
+  }
+
+  /* Title competes too much with the search bar at phone widths - the
+     page's own heading (visible in the content below) covers this. */
+  .topbar-title {
+    display: none;
+  }
+
+  .topbar-search {
+    max-width: none;
+  }
+}
