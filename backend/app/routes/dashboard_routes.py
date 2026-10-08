@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, Question, Answer, Category
 from app.auth import get_current_user
+from app.Services import gamification_service as gamify
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -41,6 +42,10 @@ def get_dashboard_summary(current_user=Depends(get_current_user), db: Session = 
         Answer.UserID == current_user["UserID"], Answer.IsAccepted.is_(True)
     ).count()
 
+    monthly_points, monthly_level = (
+        gamify.get_monthly_points_and_level(db, user) if user else (0, "Beginner")
+    )
+
     return {
         "Stats": {
             "TotalUsers": db.query(User).count(),
@@ -50,8 +55,8 @@ def get_dashboard_summary(current_user=Depends(get_current_user), db: Session = 
         },
         "Me": {
             "FullName": user.FullName if user else None,
-            "Points": user.Points if user else 0,
-            "Level": user.Level if user else "Beginner",
+            "Points": monthly_points,
+            "Level": monthly_level,
             "QuestionsAsked": my_questions,
             "AnswersPosted": my_answers,
             "AcceptedAnswers": my_accepted,
