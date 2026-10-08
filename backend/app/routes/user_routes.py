@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models import User, Role, Question, Answer, Comment, Vote, Notification, UserBadge, MonthlyBadge, MonthlyPoints, QuestionView, ROLE_ADMIN
 from app.auth import hash_password, get_current_user, require_role
 from app.Services import gamification_service as gamify
+from app.Services.email_service import send_account_creation_email
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -51,14 +52,20 @@ def get_users(current_user=Depends(get_current_user), db: Session = Depends(get_
 
 
 @router.post("/")
-def create_user(user: UserCreate, current_user=Depends(require_role(ROLE_ADMIN)), db: Session = Depends(get_db)):
+def create_user(
+    user: UserCreate,
+    background_tasks: BackgroundTasks,
+    current_user=Depends(require_role(ROLE_ADMIN)),
+    db: Session = Depends(get_db),
+):
     if db.query(User).filter(User.Username == user.Username).first():
         raise HTTPException(status_code=409, detail="Username already exists")
 
     if db.query(User).filter(User.Email == user.Email).first():
         raise HTTPException(status_code=409, detail="Email already exists")
 
-    if not db.query(Role).filter(Role.RoleID == user.RoleID).first():
+    role = db.query(Role).filter(Role.RoleID == user.RoleID).first()
+    if not role:
         raise HTTPException(status_code=400, detail="Please select a valid role")
 
     new_user = User(
@@ -73,6 +80,16 @@ def create_user(user: UserCreate, current_user=Depends(require_role(ROLE_ADMIN))
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    background_tasks.add_task(
+        send_account_creation_email,
+        to_email=new_user.Email,
+        full_name=new_user.FullName,
+        username=new_user.Username,
+        password=user.Password,
+        role_name=role.RoleName if role else "Member",
+        department=new_user.Department or "",
+    )
 
     return {"message": "User created successfully", **_serialize(new_user)}
 
